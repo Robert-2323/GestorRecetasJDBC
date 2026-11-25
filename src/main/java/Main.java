@@ -12,10 +12,11 @@ public class Main {
                     "3-Añadir nuevas recetas.\n" +
                     "4-Modificar el tiempo de preparación y el número de raciones de una\n" +
                     "receta.\n" +
-                    "5-Eliminar una receta del catálogo\n");
+                    "5-Eliminar una receta del catálogo\n" +
+                    "6-Buscar receta por nombre");
             System.out.print("Elige una opcion: ");
             option=sc.nextInt();
-            if (option<6 && option>0){
+            if (option<7 && option>=0){
                 if (option == 1) {
                     mostrarRecetas();
                 }
@@ -32,11 +33,19 @@ public class Main {
                     modificarReceta();
                 }
 
+                if (option==5){
+                    borrarReceta();
+                }
+                if (option==6){
+                    buscarRecetaNombre();
+                }
+
             }else {
                 System.out.println("El valor introducito no es incorrecto");
                 option=-1;
             }
         }
+        System.out.println("Fin del programa");
     }
 
     public static void mostrarRecetas(){
@@ -216,4 +225,88 @@ public class Main {
             }
         }
     }
+
+    public static void borrarReceta(){
+        Scanner sc=new Scanner(System.in);
+
+        System.out.println("Introduzca el ID de la receta que desea borrar: ");
+        int id=sc.nextInt();
+
+        String sql= """
+                delete from recetas where id=?;
+                """;
+        Connection con=null;
+        PreparedStatement pst=null;
+
+        try {
+            con=Conexion.getConexion();
+            con.setAutoCommit(false);
+
+            pst=con.prepareStatement(sql);
+
+            pst.setInt(1,id);
+
+            pst.executeUpdate();
+
+            con.commit();
+            System.out.println("Receta borrada correctamente");
+
+        }catch (SQLException e){
+            System.out.println("SQL-ERROR: "+e.getMessage());
+            try {
+                if (con!=null){
+                    con.rollback();
+                    System.out.println("No se ha podido borrar la receta");
+                }
+            }catch (SQLException ex){
+                System.out.println("SQL-ERROR: "+e.getMessage());
+            }
+        }finally {
+            try {
+                // Cierra la sentencia
+                if (pst != null) {
+                    pst.close();
+                }
+                // Cierra la conexión
+                if (con != null) {
+                    con.close();
+                }
+            } catch (SQLException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+
+    public static void buscarRecetaNombre() {
+        Scanner sc = new Scanner(System.in);
+        System.out.println("Introduzca el nombre de la receta que desea buscar");
+        String nombre = sc.next();
+
+        String sql = "{CALL buscarReceta(?)}";
+
+        try (Connection con = Conexion.getConexion()) {
+            CallableStatement cstm = con.prepareCall(sql);
+            cstm.setString(1, nombre);
+
+
+            ResultSet rs = cstm.executeQuery();
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String nom = rs.getString("nombre");
+                String categoria = rs.getString("categoria");
+                int tiempoPreparacion = rs.getInt("tiempo_preparacion");
+                String dificultad = rs.getString("dificultad");
+                int raciones = rs.getInt("raciones");
+
+                System.out.println(id + "-" + nom + "-" + categoria + "-" + tiempoPreparacion + "-" + dificultad + "-" + raciones);
+            }
+            System.out.println();
+
+
+        } catch (SQLException e) {
+            System.out.println("SQL-ERROR: "+e.getMessage());
+        }
+    }
+
+
 }
